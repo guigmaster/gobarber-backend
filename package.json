@@ -1,0 +1,7 @@
+{
+  "name": "gobarber-frontend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Guilherme Silva <guisilva.master@gmail.com>",
+  "license": "MIT"
+}
