@@ -1,14 +1,12 @@
-import { format, isBefore, parseISO, startOfHour, subHours } from 'date-fns';
-import pt from 'date-fns/locale';
+import { isBefore, subHours } from 'date-fns';
 
 import User from '../models/User';
 import File from '../models/File';
 import Appointment from '../models/Appointment';
 
-import Notification from '../schemas/Notification';
-
 import Queue from '../../lib/Queue';
 import CancellationMail from '../jobs/CancellationMail';
+import CreateAppoitmentService from '../services/CreateAppoitmentService';
 
 class AppointmentController {
   async index(req, res) {
@@ -42,64 +40,10 @@ class AppointmentController {
   async store(req, res) {
     const { provider_id, date } = req.boby;
 
-    /**
-     * Check if provider_id is a provider
-     */
-
-    const checkIsProvider = await User.findOne({
-      where: { id: provider_id, provider: true },
-    });
-
-    if (!checkIsProvider) {
-      return res
-        .status(401)
-        .json({ error: 'You can only create appointments with providers' });
-    }
-
-    /**
-     * Check for past dates
-     */
-    const hourStart = startOfHour(parseISO(date));
-
-    if (isBefore(hourStart, new Date())) {
-      return res.status(400).json({ error: 'Past date are not permitted!' });
-    }
-
-    /**
-     * Check date avaivability
-     */
-    const checkAvaivabiliy = await Appointment.findOne({
-      where: {
-        provider_id,
-        canceled_at: null,
-        date: hourStart,
-      },
-    });
-
-    if (checkAvaivabiliy) {
-      return res
-        .status(400)
-        .json({ error: 'Apponitment date is not available!' });
-    }
-
-    const appointment = await Appointment.create({
-      user_id: req.userId,
-      provider_id,
+    const appointment = CreateAppoitmentService.run({
       date,
-    });
-
-    /**
-     * Notify appointment provider
-     */
-
-    const user = User.findByPk(this.userId);
-    const formattedDate = format(hourStart, "dd 'de' MMM', às' H:mm'h'", {
-      locale: pt,
-    });
-
-    await Notification.create({
-      content: `Novo agendamento de ${user.name} para dia ${formattedDate}`,
-      user: provider_id,
+      provider_id,
+      userId: req.userId,
     });
 
     return res.json(appointment);
