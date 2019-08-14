@@ -6,6 +6,8 @@ import Appointment from '../models/Appointment';
 
 import Notification from '../schemas/Notification';
 
+import Cache from '../../lib/Cache';
+
 class CreateAppoitmentService {
   async run({ date, provider_id, userId }) {
     /**
@@ -53,7 +55,7 @@ class CreateAppoitmentService {
      * Notify appointment provider
      */
 
-    const user = User.findByPk(this.userId);
+    const user = User.findByPk(userId);
     const formattedDate = format(hourStart, "dd 'de' MMM', às' H:mm'h'", {
       locale: pt,
     });
@@ -62,6 +64,12 @@ class CreateAppoitmentService {
       content: `Novo agendamento de ${user.name} para dia ${formattedDate}`,
       user: provider_id,
     });
+
+    /**
+     * Invalidate cache
+     */
+
+    await Cache.invalidatePrefix(`user:${userId}:appointements`);
 
     return appointment;
   }
